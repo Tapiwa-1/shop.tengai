@@ -44,11 +44,24 @@ class ProductForm
                                 }
 
                                 $set('category_key', ProductCategories::guessTopLevel($get('category')));
+                                $set('category_pair', ProductCategories::guessNestedPair($get('category')));
                             })
-                            ->afterStateUpdated(fn (Set $set) => $set('category', null)),
+                            ->afterStateUpdated(function (Set $set): void {
+                                $set('category_pair', null);
+                                $set('category', null);
+                            }),
+                        Select::make('category_pair')
+                            ->label('Category Pair')
+                            ->options(fn (Get $get): array => ProductCategories::nestedPairOptions($get('category_key')))
+                            ->searchable()
+                            ->live()
+                            ->dehydrated(false)
+                            ->visible(fn (Get $get): bool => ProductCategories::hasNestedPair($get('category_key')))
+                            ->afterStateUpdated(fn (Set $set) => $set('category', null))
+                            ->placeholder('Select category pair'),
                         Select::make('category')
                             ->label('Category Value')
-                            ->options(fn (Get $get): array => ProductCategories::optionsForTopLevel($get('category_key')))
+                            ->options(fn (Get $get): array => ProductCategories::optionsForPair($get('category_key'), $get('category_pair')))
                             ->searchable()
                             ->placeholder('Select category value'),
                         TextInput::make('source_url')

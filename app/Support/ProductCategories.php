@@ -67,21 +67,63 @@ class ProductCategories
     /**
      * @return array<string, string>
      */
-    public static function optionsForTopLevel(?string $topLevel): array
+    public static function nestedPairOptions(?string $topLevel): array
     {
         if (blank($topLevel)) {
             return [];
         }
 
-        foreach (self::tree() as $node) {
-            if ($node['name'] !== $topLevel) {
+        $node = self::findTopLevelNode($topLevel);
+
+        if (! $node) {
+            return [];
+        }
+
+        $options = [];
+
+        foreach ($node['children'] as $child) {
+            if (! is_array($child) || ! isset($child['name'])) {
                 continue;
             }
 
-            return self::flattenChildren($topLevel, $node['children']);
+            $path = $topLevel.' > '.$child['name'];
+            $options[$path] = $path;
         }
 
-        return [];
+        return $options;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function optionsForPair(?string $topLevel, ?string $pairPath): array
+    {
+        if (blank($topLevel)) {
+            return [];
+        }
+
+        $node = self::findTopLevelNode($topLevel);
+
+        if (! $node) {
+            return [];
+        }
+
+        if (blank($pairPath)) {
+            return self::leafOptionsFromChildren($topLevel, $node['children']);
+        }
+
+        $target = self::findNodeByPath($node, $pairPath);
+
+        if (! is_array($target) || ! isset($target['children']) || ! is_array($target['children'])) {
+            return [];
+        }
+
+        return self::leafOptionsFromChildren($pairPath, $target['children']);
+    }
+
+    public static function hasNestedPair(?string $topLevel): bool
+    {
+        return self::nestedPairOptions($topLevel) !== [];
     }
 
     public static function guessTopLevel(?string $category): ?string
@@ -99,11 +141,74 @@ class ProductCategories
         return null;
     }
 
+    public static function guessNestedPair(?string $category): ?string
+    {
+        if (blank($category)) {
+            return null;
+        }
+
+        $parts = explode(' > ', $category);
+
+        if (count($parts) < 3) {
+            return null;
+        }
+
+        return $parts[0].' > '.$parts[1];
+    }
+
+    /**
+     * @return array{name: string, children: array<int, mixed>}|null
+     */
+    private static function findTopLevelNode(string $topLevel): ?array
+    {
+        foreach (self::tree() as $node) {
+            if ($node['name'] === $topLevel) {
+                return $node;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array{name: string, children?: array<int, mixed>}  $node
+     * @return array{name: string, children?: array<int, mixed>}|null
+     */
+    private static function findNodeByPath(array $node, string $path): ?array
+    {
+        $parts = explode(' > ', $path);
+
+        if (($parts[0] ?? null) !== ($node['name'] ?? null)) {
+            return null;
+        }
+
+        $current = $node;
+
+        foreach (array_slice($parts, 1) as $part) {
+            $next = null;
+
+            foreach (($current['children'] ?? []) as $child) {
+                if (is_array($child) && ($child['name'] ?? null) === $part) {
+                    $next = $child;
+                    break;
+                }
+            }
+
+            if (! $next) {
+                return null;
+            }
+
+            $current = $next;
+        }
+
+        return $current;
+    }
+
     /**
      * @param  array<int, mixed>  $children
      * @return array<string, string>
      */
-    private static function flattenChildren(string $prefix, array $children): array
+    private static function leafOptionsFromChildren(string $prefix, array $children): array
     {
         $options = [];
 
@@ -111,23 +216,7 @@ class ProductCategories
             if (is_string($child)) {
                 $value = $prefix.' > '.$child;
                 $options[$value] = $value;
-
-                continue;
             }
-
-            if (! is_array($child) || ! isset($child['name'])) {
-                continue;
-            }
-
-            $nextPrefix = $prefix.' > '.$child['name'];
-
-            if (! isset($child['children']) || ! is_array($child['children'])) {
-                $options[$nextPrefix] = $nextPrefix;
-
-                continue;
-            }
-
-            $options += self::flattenChildren($nextPrefix, $child['children']);
         }
 
         return $options;
