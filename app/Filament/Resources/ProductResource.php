@@ -36,10 +36,6 @@ class ProductResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->toggleable(),
-                TextColumn::make('asin')
-                    ->searchable()
-                    ->sortable()
-                    ->toggleable(),
                 TextColumn::make('price')
                     ->money('USD', divideBy: 1)
                     ->sortable(),
@@ -65,13 +61,6 @@ class ProductResource extends Resource
                         ->pluck('brand', 'brand')
                         ->all())
                     ->searchable(),
-                SelectFilter::make('currency')
-                    ->options(fn () => Product::query()
-                        ->whereNotNull('currency')
-                        ->orderBy('currency')
-                        ->distinct()
-                        ->pluck('currency', 'currency')
-                        ->all()),
                 SelectFilter::make('category')
                     ->options(fn () => Product::query()
                         ->whereNotNull('category')
@@ -82,7 +71,7 @@ class ProductResource extends Resource
                         ->all())
                     ->searchable(),
             ])
-            ->searchable(['title', 'asin', 'brand', 'category'])
+            ->searchable(['title', 'brand', 'category'])
             ->actions([
                 \Filament\Actions\ViewAction::make(),
                 \Filament\Actions\EditAction::make(),

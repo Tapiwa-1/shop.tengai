@@ -8,9 +8,9 @@ use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
-use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
 class ProductForm
@@ -25,12 +25,6 @@ class ProductForm
                             ->required()
                             ->maxLength(255),
                         TextInput::make('brand')
-                            ->maxLength(255),
-                        TextInput::make('asin')
-                            ->maxLength(20)
-                            ->minLength(10)
-                            ->unique(ignoreRecord: true),
-                        TextInput::make('sku')
                             ->maxLength(255),
                         Select::make('category_key')
                             ->label('Category Key')
@@ -80,12 +74,10 @@ class ProductForm
                     ->schema([
                         TextInput::make('currency')
                             ->default('USD')
-                            ->required()
-                            ->maxLength(3),
+                            ->disabled()
+                            ->dehydrated()
+                            ->required(),
                         TextInput::make('price')
-                            ->numeric()
-                            ->prefix('$'),
-                        TextInput::make('compare_at_price')
                             ->numeric()
                             ->prefix('$'),
                         TextInput::make('rating')

@@ -15,11 +15,8 @@ return new class extends Migration
             $table->id();
             $table->string('title');
             $table->string('brand')->nullable();
-            $table->string('asin')->unique()->nullable();
-            $table->string('sku')->nullable();
             $table->string('currency')->default('USD');
             $table->decimal('price', 10, 2)->nullable();
-            $table->decimal('compare_at_price', 10, 2)->nullable();
             $table->string('category')->nullable();
             $table->decimal('rating', 3, 2)->nullable();
             $table->unsignedInteger('review_count')->default(0);

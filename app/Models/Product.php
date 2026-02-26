@@ -17,11 +17,8 @@ class Product extends Model
     protected $fillable = [
         'title',
         'brand',
-        'asin',
-        'sku',
         'currency',
         'price',
-        'compare_at_price',
         'category',
         'rating',
         'review_count',
@@ -31,6 +28,14 @@ class Product extends Model
         'bullet_points',
         'images',
     ];
+
+
+    protected static function booted(): void
+    {
+        static::saving(function (Product $product): void {
+            $product->currency = 'USD';
+        });
+    }
 
     /**
      * The attributes that should be cast.
@@ -44,7 +49,6 @@ class Product extends Model
             'bullet_points' => 'array',
             'images' => 'array',
             'price' => 'decimal:2',
-            'compare_at_price' => 'decimal:2',
             'rating' => 'decimal:2',
         ];
     }
