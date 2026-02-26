@@ -57,13 +57,30 @@ class ProductResource extends Resource
                         'out_of_stock' => 'Out of stock',
                         'preorder' => 'Preorder',
                     ]),
+                SelectFilter::make('brand')
+                    ->options(fn () => Product::query()
+                        ->whereNotNull('brand')
+                        ->orderBy('brand')
+                        ->distinct()
+                        ->pluck('brand', 'brand')
+                        ->all())
+                    ->searchable(),
+                SelectFilter::make('currency')
+                    ->options(fn () => Product::query()
+                        ->whereNotNull('currency')
+                        ->orderBy('currency')
+                        ->distinct()
+                        ->pluck('currency', 'currency')
+                        ->all()),
                 SelectFilter::make('category')
                     ->options(fn () => Product::query()
                         ->whereNotNull('category')
                         ->orderBy('category')
                         ->distinct()
-                        ->pluck('category', 'category')
-                        ->all()),
+                        ->pluck('category')
+                        ->mapWithKeys(fn (string $category): array => [$category => str($category)->afterLast(' > ')->toString()])
+                        ->all())
+                    ->searchable(),
             ])
             ->searchable(['title', 'asin', 'brand', 'category'])
             ->actions([
