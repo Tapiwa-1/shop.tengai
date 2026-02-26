@@ -13,6 +13,10 @@ const availabilityLabel = {
 };
 
 const getImage = (product) => {
+    if (product.image_url) {
+        return product.image_url;
+    }
+
     const image = product.images?.[0];
 
     if (!image) {
