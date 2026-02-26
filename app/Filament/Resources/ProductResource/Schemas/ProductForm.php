@@ -2,11 +2,14 @@
 
 namespace App\Filament\Resources\ProductResource\Schemas;
 
+use App\Support\ProductCategories;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
@@ -29,8 +32,25 @@ class ProductForm
                             ->unique(ignoreRecord: true),
                         TextInput::make('sku')
                             ->maxLength(255),
-                        TextInput::make('category')
-                            ->maxLength(255),
+                        Select::make('category_key')
+                            ->label('Category Key')
+                            ->options(ProductCategories::topLevelOptions())
+                            ->searchable()
+                            ->live()
+                            ->dehydrated(false)
+                            ->afterStateHydrated(function (Set $set, Get $get): void {
+                                if (filled($get('category_key'))) {
+                                    return;
+                                }
+
+                                $set('category_key', ProductCategories::guessTopLevel($get('category')));
+                            })
+                            ->afterStateUpdated(fn (Set $set) => $set('category', null)),
+                        Select::make('category')
+                            ->label('Category Value')
+                            ->options(fn (Get $get): array => ProductCategories::optionsForTopLevel($get('category_key')))
+                            ->searchable()
+                            ->placeholder('Select category value'),
                         TextInput::make('source_url')
                             ->url()
                             ->maxLength(65535),
