@@ -87,7 +87,7 @@ class ProductCategories
             }
 
             $path = $topLevel.' > '.$child['name'];
-            $options[$path] = $path;
+            $options[$path] = $child['name'];
         }
 
         return $options;
@@ -215,7 +215,7 @@ class ProductCategories
         foreach ($children as $child) {
             if (is_string($child)) {
                 $value = $prefix.' > '.$child;
-                $options[$value] = $value;
+                $options[$value] = $child;
             }
         }
 
