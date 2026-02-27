@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Product extends Model
 {
@@ -19,7 +20,7 @@ class Product extends Model
         'brand',
         'currency',
         'price',
-        'category',
+        'category_id',
         'rating',
         'review_count',
         'availability',
@@ -29,12 +30,16 @@ class Product extends Model
         'images',
     ];
 
-
     protected static function booted(): void
     {
         static::saving(function (Product $product): void {
             $product->currency = 'USD';
         });
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
     }
 
     /**

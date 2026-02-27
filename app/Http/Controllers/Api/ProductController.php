@@ -13,6 +13,7 @@ class ProductController extends Controller
     public function index(): JsonResponse
     {
         $products = Product::query()
+            ->with('category.parent.parent')
             ->latest()
             ->get([
                 'id',
@@ -20,7 +21,6 @@ class ProductController extends Controller
                 'brand',
                 'price',
                 'currency',
-                'category',
                 'rating',
                 'review_count',
                 'availability',
@@ -33,7 +33,7 @@ class ProductController extends Controller
                     'brand' => $product->brand,
                     'price' => $product->price,
                     'currency' => $product->currency,
-                    'category' => $product->category,
+                    'category' => $product->category?->full_name,
                     'rating' => $product->rating,
                     'review_count' => $product->review_count,
                     'availability' => $product->availability,

@@ -7,6 +7,7 @@ use App\Filament\Resources\ProductResource\Pages\EditProduct;
 use App\Filament\Resources\ProductResource\Pages\ListProducts;
 use App\Filament\Resources\ProductResource\Pages\ViewProduct;
 use App\Filament\Resources\ProductResource\Schemas\ProductForm;
+use App\Models\Category;
 use App\Models\Product;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -36,6 +37,9 @@ class ProductResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->toggleable(),
+                TextColumn::make('category.full_name')
+                    ->label('Category')
+                    ->toggleable(),
                 TextColumn::make('price')
                     ->money('USD', divideBy: 1)
                     ->sortable(),
@@ -61,17 +65,17 @@ class ProductResource extends Resource
                         ->pluck('brand', 'brand')
                         ->all())
                     ->searchable(),
-                SelectFilter::make('category')
-                    ->options(fn () => Product::query()
-                        ->whereNotNull('category')
-                        ->orderBy('category')
-                        ->distinct()
-                        ->pluck('category')
-                        ->mapWithKeys(fn (string $category): array => [$category => str($category)->afterLast(' > ')->toString()])
+                SelectFilter::make('category_id')
+                    ->label('Category')
+                    ->options(fn (): array => Category::query()
+                        ->with(['parent.parent'])
+                        ->orderBy('name')
+                        ->get()
+                        ->mapWithKeys(fn (Category $category): array => [$category->id => $category->full_name])
                         ->all())
                     ->searchable(),
             ])
-            ->searchable(['title', 'brand', 'category'])
+            ->searchable(['title', 'brand'])
             ->actions([
                 \Filament\Actions\ViewAction::make(),
                 \Filament\Actions\EditAction::make(),

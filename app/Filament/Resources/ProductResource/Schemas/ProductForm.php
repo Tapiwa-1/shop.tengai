@@ -2,15 +2,13 @@
 
 namespace App\Filament\Resources\ProductResource\Schemas;
 
-use App\Support\ProductCategories;
+use App\Models\Category;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Utilities\Get;
-use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 
 class ProductForm
@@ -26,38 +24,16 @@ class ProductForm
                             ->maxLength(255),
                         TextInput::make('brand')
                             ->maxLength(255),
-                        Select::make('category_key')
-                            ->label('Category Key')
-                            ->options(ProductCategories::topLevelOptions())
+                        Select::make('category_id')
+                            ->label('Category')
+                            ->options(fn (): array => Category::query()
+                                ->with(['parent.parent'])
+                                ->orderBy('name')
+                                ->get()
+                                ->mapWithKeys(fn (Category $category): array => [$category->id => $category->full_name])
+                                ->all())
                             ->searchable()
-                            ->live()
-                            ->dehydrated(false)
-                            ->afterStateHydrated(function (Set $set, Get $get): void {
-                                if (filled($get('category_key'))) {
-                                    return;
-                                }
-
-                                $set('category_key', ProductCategories::guessTopLevel($get('category')));
-                                $set('category_pair', ProductCategories::guessNestedPair($get('category')));
-                            })
-                            ->afterStateUpdated(function (Set $set): void {
-                                $set('category_pair', null);
-                                $set('category', null);
-                            }),
-                        Select::make('category_pair')
-                            ->label('Category Pair')
-                            ->options(fn (Get $get): array => ProductCategories::nestedPairOptions($get('category_key')))
-                            ->searchable()
-                            ->live()
-                            ->dehydrated(false)
-                            ->visible(fn (Get $get): bool => ProductCategories::hasNestedPair($get('category_key')))
-                            ->afterStateUpdated(fn (Set $set) => $set('category', null))
-                            ->placeholder('Select category pair'),
-                        Select::make('category')
-                            ->label('Category Value')
-                            ->options(fn (Get $get): array => ProductCategories::optionsForPair($get('category_key'), $get('category_pair')))
-                            ->searchable()
-                            ->placeholder('Select category value'),
+                            ->preload(),
                         TextInput::make('source_url')
                             ->url()
                             ->maxLength(65535),
