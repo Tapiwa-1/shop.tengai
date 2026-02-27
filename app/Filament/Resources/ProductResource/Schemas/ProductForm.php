@@ -9,6 +9,8 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 
 class ProductForm
@@ -24,16 +26,40 @@ class ProductForm
                             ->maxLength(255),
                         TextInput::make('brand')
                             ->maxLength(255),
-                        Select::make('category_id')
-                            ->label('Category')
-                            ->options(fn (): array => Category::query()
-                                ->with(['parent.parent'])
-                                ->orderBy('name')
-                                ->get()
-                                ->mapWithKeys(fn (Category $category): array => [$category->id => $category->full_name])
-                                ->all())
+                        Select::make('parent_category_id')
+                            ->label('Parent Category')
+                            ->options(fn (): array => self::categoryOptionsByParentId(null))
                             ->searchable()
-                            ->preload(),
+                            ->live()
+                            ->dehydrated(false)
+                            ->afterStateHydrated(function (Set $set, Get $get): void {
+                                if (filled($get('parent_category_id'))) {
+                                    return;
+                                }
+
+                                $selected = self::resolveCategoryChain($get('category_id'));
+
+                                $set('parent_category_id', $selected['parent']);
+                                $set('child_category_id', $selected['child']);
+                            })
+                            ->afterStateUpdated(function (Set $set): void {
+                                $set('child_category_id', null);
+                                $set('category_id', null);
+                            }),
+                        Select::make('child_category_id')
+                            ->label('Child Category')
+                            ->options(fn (Get $get): array => self::categoryOptionsByParentId($get('parent_category_id')))
+                            ->searchable()
+                            ->live()
+                            ->dehydrated(false)
+                            ->visible(fn (Get $get): bool => self::hasNestedChildren($get('parent_category_id')))
+                            ->afterStateUpdated(fn (Set $set) => $set('category_id', null)),
+                        Select::make('category_id')
+                            ->label('Final Category')
+                            ->options(fn (Get $get): array => self::finalCategoryOptions($get('parent_category_id'), $get('child_category_id')))
+                            ->searchable()
+                            ->preload()
+                            ->required(),
                         TextInput::make('source_url')
                             ->url()
                             ->maxLength(65535),
@@ -82,5 +108,79 @@ class ProductForm
                             ->panelLayout('grid'),
                     ]),
             ]);
+    }
+
+    /**
+     * @return array<string, int|null>
+     */
+    private static function resolveCategoryChain(mixed $categoryId): array
+    {
+        if (! $categoryId) {
+            return ['parent' => null, 'child' => null];
+        }
+
+        $leaf = Category::query()->with('parent.parent')->find($categoryId);
+
+        if (! $leaf) {
+            return ['parent' => null, 'child' => null];
+        }
+
+        $child = $leaf->parent;
+
+        if (! $child) {
+            return ['parent' => null, 'child' => null];
+        }
+
+        if (! $child->parent) {
+            return ['parent' => $child->id, 'child' => null];
+        }
+
+        return [
+            'parent' => $child->parent->id,
+            'child' => $child->id,
+        ];
+    }
+
+
+    /**
+     * @return array<int, string>
+     */
+    private static function finalCategoryOptions(?int $parentCategoryId, ?int $childCategoryId): array
+    {
+        if (! $parentCategoryId) {
+            return [];
+        }
+
+        if (self::hasNestedChildren($parentCategoryId) && ! $childCategoryId) {
+            return [];
+        }
+
+        $sourceId = $childCategoryId ?: $parentCategoryId;
+
+        return self::categoryOptionsByParentId($sourceId);
+    }
+
+    private static function hasNestedChildren(?int $parentCategoryId): bool
+    {
+        if (! $parentCategoryId) {
+            return false;
+        }
+
+        return Category::query()
+            ->where('parent_id', $parentCategoryId)
+            ->whereHas('children')
+            ->exists();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private static function categoryOptionsByParentId(?int $parentId): array
+    {
+        return Category::query()
+            ->where('parent_id', $parentId)
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->all();
     }
 }
